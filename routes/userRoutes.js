@@ -24,11 +24,22 @@ router.post('/create', async(req, res, next) => {
             let response = await tables.User.findOne({ where: { email: req.body.email } })
             if (response == null) {
                 const passwordHash = bcrypt.hashSync(req.body.password, saltRounds);
-                await tables['User'].create({ 
+                createdUser = await tables['User'].create({ 
                     email: req.body.email, 
                     password: passwordHash , 
                     username: req.body.username
                 })
+                
+                await tables['ListFollowedAssets'].create({
+                    name: "Followed List",
+                    userId: createdUser.id
+                })
+
+                await tables['ListOwnedAssets'].create({
+                    name: "Owned List",
+                    userId: createdUser.id
+                })
+                
                 res.status(201).json({
                     Message: "Resource created",
                     statusCode: 201
@@ -140,6 +151,164 @@ async function sendMail(toEmail) {
         console.log(body);
     });
 }
+
+
+// add asset to followed list
+router.post('/add-asset-followed-list', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && 
+            req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                let list = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
+                if(req.query.asset == 'crypto'){
+                    await tables['Cryptocurrency'].create({ 
+                        website : req.body.website,
+                        tehnicalDoc : req.body.tehnicalDoc,
+                        explorer: req.body.explorer,
+                        source_code: req.body.source_code,
+                        logo: req.body.logo,
+                        name: req.body.name,
+                        symbol: req.body.symbol,
+                        description: req.body.description,
+                        numberOfAssetsOwned: req.body.numberOfAssetsOwned,
+                        listFollowedAssetId: list.id
+                     })
+                     // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
+                     //.then(crypto => {
+                    //     // await tables['DailyCryptoPrices'].create({
+                            
+                    //     // })
+                    // })
+                } else {
+                    await tables['Stock'].create({ 
+                        logo: req.body.logo,
+                        assetType: req.body.assetType,
+                        description: req.body.description,
+                        ceo: req.body.ceo,
+                        employees: req.body.employees,
+                        headquarter: req.body.headquarter,
+                        sector: req.body.sector,
+                        industry: req.body.industry,
+                        market_cap: req.body.market_cap,
+                        peRatio: req.body.peRatio,
+                        dividentYield: req.body.dividentYield,
+                        beta: req.body.beta,
+                        name: req.body.name,
+                        symbol: req.body.symbol,
+                        revenue: req.body.revenue,
+                        eps: req.body.eps,
+                        country: req.body.country,
+                        numberOfAssetsOwned: req.body.numberOfAssetsOwned,
+                        listFollowedAssetId: list.id
+                    })
+                    // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
+                }
+                
+                res.status(201).json({
+                    Message: "Resource created",
+                    statusCode: 201
+                })
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+
+
+// add asset to owned list
+router.post('/add-asset-owned-list', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && 
+            req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                let list = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
+                if(req.query.asset == 'crypto'){
+                    await tables['Cryptocurrency'].create({ 
+                        website : req.body.website,
+                        tehnicalDoc : req.body.tehnicalDoc,
+                        explorer: req.body.explorer,
+                        source_code: req.body.source_code,
+                        logo: req.body.logo,
+                        name: req.body.name,
+                        symbol: req.body.symbol,
+                        description: req.body.description,
+                        numberOfAssetsOwned: req.body.numberOfAssetsOwned,
+                        listOwnedAssetId: list.id
+                     })
+                     // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
+                     //.then(crypto => {
+                    //     // await tables['DailyCryptoPrices'].create({
+                            
+                    //     // })
+                    // })
+                } else {
+                    await tables['Stock'].create({ 
+                        logo: req.body.logo,
+                        assetType: req.body.assetType,
+                        description: req.body.description,
+                        ceo: req.body.ceo,
+                        employees: req.body.employees,
+                        headquarter: req.body.headquarter,
+                        sector: req.body.sector,
+                        industry: req.body.industry,
+                        market_cap: req.body.market_cap,
+                        peRatio: req.body.peRatio,
+                        dividentYield: req.body.dividentYield,
+                        beta: req.body.beta,
+                        name: req.body.name,
+                        symbol: req.body.symbol,
+                        revenue: req.body.revenue,
+                        eps: req.body.eps,
+                        country: req.body.country,
+                        numberOfAssetsOwned: req.body.numberOfAssetsOwned,
+                        listOwnedAssetId: list.id
+                    })
+                    // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
+                }
+                
+                res.status(201).json({
+                    Message: "Resource created",
+                    statusCode: 201
+                })
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
 
 
 module.exports = router
