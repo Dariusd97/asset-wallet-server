@@ -36,6 +36,10 @@ module.exports = (sequelize, DataTypes) => {
         description : {
             type: Sequelize.STRING(255),
             allowNull : true
+        },
+        numberOfAssetsOwned : {
+            type: Sequelize.INTEGER,
+            allowNull : true
         }
     })
     return Cryptocurrency

@@ -26,7 +26,8 @@ const tables = {
     DailyStockPrices: require('./models/daily_stock_prices')(sequelize),
     DailyCryptoPrices: require('./models/daily_crypto_prices')(sequelize),
     Cryptocurrency: require('./models/cryptocurrency')(sequelize),
-    FinancialGoal: require('./models/financial_goal')(sequelize)
+    FinancialGoal: require('./models/financial_goal')(sequelize),
+    Address: require('./models/address')(sequelize)
 }
 
 tables.User.hasMany(tables.FinancialGoal)
@@ -42,6 +43,7 @@ tables.ListOwnedAssets.hasMany(tables.Cryptocurrency)
 tables.ListOwnedAssets.hasMany(tables.Stock)
 tables.Cryptocurrency.hasMany(tables.DailyCryptoPrices)
 tables.Stock.hasMany(tables.DailyStockPrices)
+tables.User.hasMany(tables.Address)
 
 // mysql -u root -p
 // 12345678

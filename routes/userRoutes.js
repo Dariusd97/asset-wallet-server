@@ -6,11 +6,15 @@ const DataTypes = sequelize.DataTypes;
 const tables = database.tables
 
 const bcrypt = require('bcrypt');
+const { query } = require("express");
 const saltRounds = 10;
 
 const api_key = '09ca05befe815e72a0bccba760f51092-dc5f81da-2fe1257f';
 const DOMAIN = 'sandbox433482a392a049d290753ae57509a2e6.mailgun.org';
 const mailgun = require('mailgun-js')({ apiKey: api_key, domain: DOMAIN });
+
+/// CAND ADAUGA UN ASSET NOU trebuie verificat daca exista deja -> atunci ii fac upadte la fk, daca nu ii fac create
+
 
 // create one user
 router.post('/create', async(req, res, next) => {
@@ -231,8 +235,6 @@ router.post('/add-asset-followed-list', async(req, res, next) => {
 })
 
 
-
-
 // add asset to owned list
 router.post('/add-asset-owned-list', async(req, res, next) => {
     try {
@@ -240,7 +242,7 @@ router.post('/add-asset-owned-list', async(req, res, next) => {
             req.query.email !== '') {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             if (user != null) {
-                let list = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
+                let list = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
                 if(req.query.asset == 'crypto'){
                     await tables['Cryptocurrency'].create({ 
                         website : req.body.website,
@@ -261,7 +263,7 @@ router.post('/add-asset-owned-list', async(req, res, next) => {
                     //     // })
                     // })
                 } else {
-                    await tables['Stock'].create({ 
+                    await tables['Stock'].update({ 
                         logo: req.body.logo,
                         assetType: req.body.assetType,
                         description: req.body.description,
@@ -309,6 +311,646 @@ router.post('/add-asset-owned-list', async(req, res, next) => {
         res.status(500).json({ Message: "Server error" })
     }
 })
+
+
+// get all followed assets
+router.get('/get-asset-followed-list', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && 
+            req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                let folowedList = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
+                let stocks = await tables['Stock'].findAll({where: {listFollowedAssetId: folowedList.id}})
+                let cryptocurrencies = await tables['Cryptocurrency'].findAll({where: {listFollowedAssetId: folowedList.id}})
+                res.status(200).json({
+                    stock: stocks,
+                    crypto: cryptocurrencies
+                })
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+// get all followed assets
+router.get('/get-asset-followed-list', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && 
+            req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                let folowedList = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
+                let stocks = await tables['Stock'].findAll({where: {listFollowedAssetId: folowedList.id}})
+                let cryptocurrencies = await tables['Cryptocurrency'].findAll({where: {listFollowedAssetId: folowedList.id}})
+                res.status(200).json({
+                    stock: stocks,
+                    crypto: cryptocurrencies
+                })
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+// remove one asset from followed assets
+router.delete('/remove-asset-followed-list', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.assetType && req.query.name) {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            let folowedList = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
+            if (user != null) {
+                if (req.query.assetType == "crypto") {
+                    await tables['Cryptocurrency']
+                        .destroy({where: {listFollowedAssetId: folowedList.id, name: req.query.name}})
+                        .then(() => {
+                            res.status(200).json({
+                                Message: "Resource deleted!"
+                            })
+                        })
+                } else {
+                    await tables['Stock']
+                        .destroy({where: {listFollowedAssetId: folowedList.id, name: req.query.name}})
+                        .then(() => {
+                            res.status(200).json({
+                                Message: "Resource deleted!"
+                            })
+                        })
+                }
+            } else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+// get all owned assets
+router.get('/get-asset-owned-list', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                let ownedList = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
+                let stocks = await tables['Stock'].findAll({where: {listOwnedAssetId: ownedList.id}})
+                let cryptocurrencies = await tables['Cryptocurrency'].findAll({where: {listOwnedAssetId: ownedList.id}})
+                res.status(200).json({
+                    stock: stocks,
+                    crypto: cryptocurrencies
+                })
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+// create objectives for a user
+router.post('/create-objectives', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['FinancialGoal']
+                    .create({
+                        goal: req.body.goal,
+                        userId: user.id
+                    })
+                    .then(createdObjective => {
+                        res.status(201).json(createdObjective)
+                    }) 
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+
+// get all objectives for a user
+router.get('/get-all-objectives', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                let objectives = await tables['FinancialGoal'].findAll({where: {userId: user.id}})
+                res.status(200).json(objectives)         
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+
+// remove objective for a user
+router.delete('/remove-objective', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.id) {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['FinancialGoal']
+                    .destroy({where: {userId: user.id, id: req.query.id}})
+                    .then(() => [
+                        res.status(200).json("Resource deleted!")         
+                    ])
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+
+// create address for a user
+router.post('/create-address', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['Address']
+                    .create({
+                        address: req.body.address,
+                        blockchain: req.body.blockchain,
+                        userId: user.id
+                    })
+                    .then(createdObjective => {
+                        res.status(201).json(createdObjective)
+                    }) 
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+// get all addresses for a user
+router.get('/get-all-addresses', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['Address']
+                    .findAll({ 
+                        where:{
+                            userId: user.id
+                        }
+                    })
+                    .then(allAddresses => {
+                        res.status(200).json(allAddresses)
+                    }) 
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+// remove address for a user
+router.delete('/remove-address', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.address) {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['Address']
+                    .destroy({ 
+                        where:{
+                            userId: user.id,
+                            address: req.query.address
+                        }
+                    })
+                    .then(() => {
+                        res.status(200).json("Resource deleted!")
+                    }) 
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+// get all monte carlo reports for a user
+router.get('/get-all-mc-reports', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['MonteCarloSimulation']
+                    .findAll({ 
+                        where:{
+                            userId: user.id
+                        }
+                    })
+                    .then(async(mcReports) => {
+                        let jsonList = []
+                        for(let i = 0; i < mcReports.length; i++) {
+                            let jsonObject = {}
+                            jsonObject['id'] = mcReports[i].id
+                            jsonObject['daysToForecast'] = mcReports[i].daysToForecast
+                            jsonObject['nrOfSimulation'] = mcReports[i].nrOfSimulation
+                            jsonObject['startDate'] = mcReports[i].startDate
+                            jsonObject['userId'] = mcReports[i].userId
+                            let report_entry = await tables['ReportEntity'].findAll({where: {monteCarloSimulationReportId: mcReports[i].id}})
+                            jsonObject['report_entry'] = report_entry
+                            jsonList.push(jsonObject)
+                        }
+                        res.status(200).json(jsonList)
+                    }) 
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+// save mc for a user
+router.post('/save-mc-sim', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['MonteCarloSimulation']
+                    .create({
+                        daysToForecast: req.body.daysToForecast,
+                        nrOfSimulation: req.body.nrOfSimulation,
+                        startDate: req.body.startDate,
+                        userId: user.id
+                    })
+                    .then(savedMC => {
+                        for(let i = 0; i < req.body.report_entries.length; i++) {
+                            tables['ReportEntity'].create({
+                                expectedValue: req.body.report_entries[i].expectedValue,
+                                return: req.body.report_entries[i].return,
+                                probBreakeven: req.body.report_entries[i].probBreakeven,
+                                beta: req.body.report_entries[i].beta,
+                                sharpe: req.body.report_entries[i].sharpe,
+                                campReturn: req.body.report_entries[i].campReturn,
+                                stockName: req.body.report_entries[i].stockName,
+                                monteCarloSimulationReportId: savedMC.id
+                            })
+                        }
+                        res.status(201).json("Resource saved!")
+                    }) 
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+// remove monte carlo report for a user
+router.delete('/remove-mc-report', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.mcID) {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['ReportEntity'].destroy({where: {monteCarloSimulationReportId: req.query.mcID}})
+                await tables['MonteCarloSimulation']
+                    .destroy({ 
+                        where:{
+                            userId: user.id,
+                            id: req.query.mcID
+                        }
+                    })
+                res.status(200).json("Resource deleted!")
+                    
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+
+// save portfolio for a user
+router.post('/save-portfolio-sim', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['PortfolioAllocationReport']
+                    .create({
+                        seReturn: req.body.seReturn,
+                        seRisk: req.body.seRisk,
+                        seSharpeRatio: req.body.seSharpeRatio,
+                        mrReturn: req.body.mrReturn,
+                        mrRisk: req.body.mrRisk,
+                        mrSharpeRatio: req.body.mrSharpeRatio,
+                        userId: user.id
+                    })
+                    .then(savedPortfolio => {
+                        for(let i = 0; i < req.body.returns.length; i++) {
+                            tables['Returns'].create({
+                                seValue: req.body.returns[i].seValue,
+                                mrValue: req.body.returns[i].mrValue,
+                                stockName: req.body.returns[i].stockName,
+                                portfolioAllocationReportId: savedPortfolio.id
+                            })
+                        }
+                        res.status(201).json("Resource saved!")
+                    }) 
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+
+// get all portfolio allocations reports for a user
+router.get('/get-all-portoflio-allocation-reports', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['PortfolioAllocationReport']
+                    .findAll({ 
+                        where:{
+                            userId: user.id
+                        }
+                    })
+                    .then(async(paReports) => {
+                        let jsonList = []
+                        for(let i = 0; i < paReports.length; i++) {
+                            let jsonObject = {}
+                            jsonObject['id'] = paReports[i].id
+                            jsonObject['seReturn'] = paReports[i].seReturn
+                            jsonObject['seRisk'] = paReports[i].seRisk
+                            jsonObject['seSharpeRatio'] = paReports[i].seSharpeRatio
+                            jsonObject['mrReturn'] = paReports[i].mrReturn
+                            jsonObject['mrRisk'] = paReports[i].mrRisk
+                            jsonObject['mrSharpeRatio'] = paReports[i].mrSharpeRatio
+                            jsonObject['userId'] = paReports[i].userId
+                            let returns = await tables['Returns'].findAll({where: {portfolioAllocationReportId: paReports[i].id}})
+                            jsonObject['returns'] = returns
+                            jsonList.push(jsonObject)
+                        }
+                        res.status(200).json(jsonList)
+                    }) 
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+// remove portfolio allocation report for a user
+router.delete('/remove-portfolio-allocation-report', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.portfolioID) {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            if (user != null) {
+                await tables['Returns'].destroy({where: {portfolioAllocationReportId: req.query.portfolioID}})
+                await tables['PortfolioAllocationReport']
+                    .destroy({ 
+                        where:{
+                            userId: user.id,
+                            id: req.query.portfolioID
+                        }
+                    })
+                res.status(200).json("Resource deleted!")
+                    
+            }
+            else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
 
 
 module.exports = router
