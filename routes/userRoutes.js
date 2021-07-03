@@ -426,6 +426,51 @@ router.delete('/remove-asset-followed-list', async(req, res, next) => {
     }
 })
 
+
+// remove one asset from OWNED assets
+router.delete('/remove-asset-ownd-list', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.assetType && req.query.name) {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            let ownedList = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
+            if (user != null) {
+                if (req.query.assetType == "crypto") {
+                    await tables['Cryptocurrency']
+                        .destroy({where: {listOwnedAssetId: ownedList.id, name: req.query.name}})
+                        .then(() => {
+                            res.status(200).json({
+                                Message: "Resource deleted!"
+                            })
+                        })
+                } else {
+                    await tables['Stock']
+                        .destroy({where: {listOwnedAssetId: ownedList.id, name: req.query.name}})
+                        .then(() => {
+                            res.status(200).json({
+                                Message: "Resource deleted!"
+                            })
+                        })
+                }
+            } else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
 // get all owned assets
 router.get('/get-asset-owned-list', async(req, res, next) => {
     try {
@@ -464,16 +509,16 @@ router.get('/get-asset-owned-list', async(req, res, next) => {
 // create objectives for a user
 router.post('/create-objectives', async(req, res, next) => {
     try {
-        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.goal) {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             if (user != null) {
                 await tables['FinancialGoal']
                     .create({
-                        goal: req.body.goal,
+                        goal: req.query.goal,
                         userId: user.id
                     })
                     .then(createdObjective => {
-                        res.status(201).json(createdObjective)
+                        res.status(201).json(createdObjective.goal)
                     }) 
             }
             else {
@@ -505,7 +550,12 @@ router.get('/get-all-objectives', async(req, res, next) => {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             if (user != null) {
                 let objectives = await tables['FinancialGoal'].findAll({where: {userId: user.id}})
-                res.status(200).json(objectives)         
+                let foo = []
+                for(let i = 0; i < objectives.length; i++) {
+                    let goal = objectives[i].goal;
+                    foo.push(goal)
+                }
+                res.status(200).json(foo)         
             }
             else {
                 res.status(409).json({
@@ -820,22 +870,52 @@ router.post('/save-portfolio-sim', async(req, res, next) => {
             if (user != null) {
                 await tables['PortfolioAllocationReport']
                     .create({
-                        seReturn: req.body.seReturn,
-                        seRisk: req.body.seRisk,
-                        seSharpeRatio: req.body.seSharpeRatio,
-                        mrReturn: req.body.mrReturn,
-                        mrRisk: req.body.mrRisk,
-                        mrSharpeRatio: req.body.mrSharpeRatio,
+                        seReturn: req.body.method_1._returns,
+                        seRisk: req.body.method_1._risk,
+                        seSharpeRatio: req.body.method_1._sharpe_ratio,
+                        mrReturn: req.body.method_2._returns,
+                        mrRisk: req.body.method_2._risk,
+                        mrSharpeRatio: req.body.method_2._sharpe_ratio,
                         userId: user.id
                     })
                     .then(savedPortfolio => {
-                        for(let i = 0; i < req.body.returns.length; i++) {
+                        let weights_1 = req.body.method_1._weights.split(",")
+                        let weights_2 = req.body.method_2._weights.split(",")
+                        if(weights_1.length == 1) {
                             tables['Returns'].create({
-                                seValue: req.body.returns[i].seValue,
-                                mrValue: req.body.returns[i].mrValue,
-                                stockName: req.body.returns[i].stockName,
+                                seValue: weights_1[0],
+                                mrValue: weights_2[0],
+                                stockName: req.body.assets[0],
                                 portfolioAllocationReportId: savedPortfolio.id
                             })
+
+                        } else if (weights_1.length == 2){
+                            for(let i = 0 ; i < req.body.assets.length; i++) {
+                                tables['Returns'].create({
+                                    seValue: weights_1[i],
+                                    mrValue: weights_2[i],
+                                    stockName: req.body.assets[i],
+                                    portfolioAllocationReportId: savedPortfolio.id
+                                })
+                            }
+                        } else if (weights_1.length == 3) {
+                            for(let i = 0 ; i < req.body.assets.length; i++) {
+                                tables['Returns'].create({
+                                    seValue: weights_1[i],
+                                    mrValue: weights_2[i],
+                                    stockName: req.body.assets[i],
+                                    portfolioAllocationReportId: savedPortfolio.id
+                                })
+                            }
+                        } else if (weights_1.length == 4) {
+                            for(let i = 0; i < weights.length; i++) {
+                                tables['Returns'].create({
+                                    seValue: req.body.returns[i].seValue,
+                                    mrValue: req.body.returns[i].mrValue,
+                                    stockName: req.body.returns[i].stockName,
+                                    portfolioAllocationReportId: savedPortfolio.id
+                                })
+                            }
                         }
                         res.status(201).json("Resource saved!")
                     }) 
