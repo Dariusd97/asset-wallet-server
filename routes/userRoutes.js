@@ -744,10 +744,21 @@ router.get('/get-all-mc-reports', async(req, res, next) => {
                             jsonObject['id'] = mcReports[i].id
                             jsonObject['daysToForecast'] = mcReports[i].daysToForecast
                             jsonObject['nrOfSimulation'] = mcReports[i].nrOfSimulation
-                            jsonObject['startDate'] = mcReports[i].startDate
                             jsonObject['userId'] = mcReports[i].userId
                             let report_entry = await tables['ReportEntity'].findAll({where: {monteCarloSimulationReportId: mcReports[i].id}})
-                            jsonObject['report_entry'] = report_entry
+                            let restultsJson = []
+                            for(let j = 0; j < report_entry.length; j++) {
+                                let dataJson = {}
+                                dataJson['symbol'] = report_entry[j].stockName
+                                dataJson['expected_value'] = report_entry[j].expectedValue
+                                dataJson['returns'] = report_entry[j].return
+                                dataJson['_prob_breakeven'] = report_entry[j].probBreakeven
+                                dataJson['beta'] = report_entry[j].beta
+                                dataJson['sharpe'] = report_entry[j].sharpe
+                                dataJson['capm_return'] = report_entry[j].campReturn
+                                restultsJson.push(dataJson)
+                            }
+                            jsonObject['results'] = restultsJson
                             jsonList.push(jsonObject)
                         }
                         res.status(200).json(jsonList)
@@ -783,19 +794,19 @@ router.post('/save-mc-sim', async(req, res, next) => {
                     .create({
                         daysToForecast: req.body.daysToForecast,
                         nrOfSimulation: req.body.nrOfSimulation,
-                        startDate: req.body.startDate,
+                        startDate: "2000-02-02",
                         userId: user.id
                     })
                     .then(savedMC => {
-                        for(let i = 0; i < req.body.report_entries.length; i++) {
+                        for(let i = 0; i < req.body.results.length; i++) {
                             tables['ReportEntity'].create({
-                                expectedValue: req.body.report_entries[i].expectedValue,
-                                return: req.body.report_entries[i].return,
-                                probBreakeven: req.body.report_entries[i].probBreakeven,
-                                beta: req.body.report_entries[i].beta,
-                                sharpe: req.body.report_entries[i].sharpe,
-                                campReturn: req.body.report_entries[i].campReturn,
-                                stockName: req.body.report_entries[i].stockName,
+                                expectedValue: req.body.results[i].expected_value,
+                                return: req.body.results[i].returns,
+                                probBreakeven: req.body.results[i]._prob_breakeven,
+                                beta: req.body.results[i].beta,
+                                sharpe: req.body.results[i].sharpe,
+                                campReturn: req.body.results[i].capm_return,
+                                stockName: req.body.results[i].symbol,
                                 monteCarloSimulationReportId: savedMC.id
                             })
                         }
@@ -959,15 +970,42 @@ router.get('/get-all-portoflio-allocation-reports', async(req, res, next) => {
                         for(let i = 0; i < paReports.length; i++) {
                             let jsonObject = {}
                             jsonObject['id'] = paReports[i].id
-                            jsonObject['seReturn'] = paReports[i].seReturn
-                            jsonObject['seRisk'] = paReports[i].seRisk
-                            jsonObject['seSharpeRatio'] = paReports[i].seSharpeRatio
-                            jsonObject['mrReturn'] = paReports[i].mrReturn
-                            jsonObject['mrRisk'] = paReports[i].mrRisk
-                            jsonObject['mrSharpeRatio'] = paReports[i].mrSharpeRatio
-                            jsonObject['userId'] = paReports[i].userId
+                            jsonMethod1 = {}
+                            jsonMethod1['_returns'] = paReports[i].seReturn
+                            jsonMethod1['_risk'] = paReports[i].seRisk
+                            jsonMethod1['_sharpe_ratio'] = paReports[i].seSharpeRatio                          
+
+                            jsonMethod2 = {}
+                            jsonMethod2['_returns'] = paReports[i].mrReturn
+                            jsonMethod2['_risk'] = paReports[i].mrRisk
+                            jsonMethod2['_sharpe_ratio'] = paReports[i].mrSharpeRatio
+                           
                             let returns = await tables['Returns'].findAll({where: {portfolioAllocationReportId: paReports[i].id}})
-                            jsonObject['returns'] = returns
+                            let assets = []
+                            for(let i = 0; i < returns.length; i++) {
+                                assets.push(returns[i].stockName)
+                            }
+                            jsonObject['assets'] = assets
+
+                            if (assets.length == 1) {
+                                jsonMethod1['_weights'] = returns[0].seValue
+                                jsonMethod2['_weights'] = returns[0].mrValue
+                            }
+                            if (assets.length == 2) {
+                                jsonMethod1['_weights'] = returns[0].seValue + "," + returns[1].seValue
+                                jsonMethod2['_weights'] = returns[0].mrValue + "," + returns[1].mrValue
+                            }
+                            if (assets.length == 3) {
+                                jsonMethod1['_weights'] = returns[0].seValue + "," + returns[1].seValue + "," + returns[2].seValue
+                                jsonMethod2['_weights'] = returns[0].mrValue + "," + returns[1].mrValue + "," + returns[2].mrValue
+                            }
+                            if (assets.length == 4) {
+                                jsonMethod1['_weights'] = returns[0].seValue + "," + returns[1].seValue + "," + returns[2].seValue + "," + returns[3].seValue
+                                jsonMethod2['_weights'] = returns[0].mrValue + "," + returns[1].mrValue + "," + returns[2].mrValue + "," + returns[3].mrValue
+                            }
+                            jsonObject['method_1'] = jsonMethod1
+                            jsonObject["method_2"] = jsonMethod2
+                            
                             jsonList.push(jsonObject)
                         }
                         res.status(200).json(jsonList)
