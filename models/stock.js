@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
             allowNull : true
         },
         description : {
-            type: Sequelize.STRING(255),
+            type: Sequelize.TEXT,
             allowNull : true
         },
         logo : {
@@ -76,6 +76,10 @@ module.exports = (sequelize, DataTypes) => {
         numberOfAssetsOwned : {
             type: Sequelize.INTEGER,
             allowNull : true
+        },
+        price: {
+            type: Sequelize.STRING,
+            allowNull: true
         }
     })
     return Stock

@@ -157,33 +157,52 @@ async function sendMail(toEmail) {
 }
 
 
-// add asset to followed list
-router.post('/add-asset-followed-list', async(req, res, next) => {
+// add stock to followed-owned list
+router.post('/add-stock-to-list', async(req, res, next) => {
     try {
         if (req.query.email && req.query.email !== null && 
             req.query.email !== '') {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             if (user != null) {
-                let list = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
-                if(req.query.asset == 'crypto'){
-                    await tables['Cryptocurrency'].create({ 
-                        website : req.body.website,
-                        tehnicalDoc : req.body.tehnicalDoc,
-                        explorer: req.body.explorer,
-                        source_code: req.body.source_code,
-                        logo: req.body.logo,
-                        name: req.body.name,
-                        symbol: req.body.symbol,
-                        description: req.body.description,
-                        numberOfAssetsOwned: req.body.numberOfAssetsOwned,
+                if(req.query.type == "owned"){
+                    let list = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
+                    let stock = await tables['Stock'].findOne({where: {symbol: req.query.symbol}})
+                    if(stock != null) {
+                        stock.update({
+                            listOwnedAssetId: list.id
+                        })
+                    } else {
+                        await tables['Stock'].create({ 
+                            logo: req.body.logo,
+                            assetType: req.body.assetType,
+                            description: req.body.description,
+                            ceo: req.body.ceo,
+                            employees: req.body.employees,
+                            headquarter: req.body.headquarter,
+                            sector: req.body.sector,
+                            industry: req.body.industry,
+                            market_cap: req.body.market_cap,
+                            peRatio: req.body.peRatio,
+                            dividentYield: req.body.dividentYield,
+                            beta: req.body.beta,
+                            name: req.body.name,
+                            symbol: req.body.symbol,
+                            revenue: req.body.revenue,
+                            eps: req.body.eps,
+                            country: req.body.country,
+                            numberOfAssetsOwned: req.body.numberOfAssetsOwned,
+                            price: req.body.price,
+                            listOwnedAssetId: list.id
+                        })
+                        // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
+                    }
+                } else if(req.query.type == "followed") {
+                    let list = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
+                    let stock = await tables['Stock'].findOne({where: {symbol: req.query.symbol}})
+                if(stock != null) {
+                    stock.update({
                         listFollowedAssetId: list.id
-                     })
-                     // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
-                     //.then(crypto => {
-                    //     // await tables['DailyCryptoPrices'].create({
-                            
-                    //     // })
-                    // })
+                    })
                 } else {
                     await tables['Stock'].create({ 
                         logo: req.body.logo,
@@ -203,15 +222,17 @@ router.post('/add-asset-followed-list', async(req, res, next) => {
                         revenue: req.body.revenue,
                         eps: req.body.eps,
                         country: req.body.country,
-                        numberOfAssetsOwned: req.body.numberOfAssetsOwned,
+                        numberOfAssetsOwned: 0,
+                        price: req.body.price,
                         listFollowedAssetId: list.id
                     })
                     // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
                 }
+                }
+                
                 
                 res.status(201).json({
-                    Message: "Resource created",
-                    statusCode: 201
+                    Message: "Resource created"
                 })
             }
             else {
@@ -235,61 +256,40 @@ router.post('/add-asset-followed-list', async(req, res, next) => {
 })
 
 
-// add asset to owned list
-router.post('/add-asset-owned-list', async(req, res, next) => {
+
+
+// add stock to followed-owned list
+router.post('/add-crypto-to-list', async(req, res, next) => {
     try {
         if (req.query.email && req.query.email !== null && 
             req.query.email !== '') {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             if (user != null) {
-                let list = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
-                if(req.query.asset == 'crypto'){
-                    await tables['Cryptocurrency'].create({ 
-                        website : req.body.website,
-                        tehnicalDoc : req.body.tehnicalDoc,
-                        explorer: req.body.explorer,
-                        source_code: req.body.source_code,
-                        logo: req.body.logo,
-                        name: req.body.name,
-                        symbol: req.body.symbol,
-                        description: req.body.description,
-                        numberOfAssetsOwned: req.body.numberOfAssetsOwned,
-                        listOwnedAssetId: list.id
-                     })
-                     // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
-                     //.then(crypto => {
-                    //     // await tables['DailyCryptoPrices'].create({
-                            
-                    //     // })
-                    // })
-                } else {
-                    await tables['Stock'].update({ 
-                        logo: req.body.logo,
-                        assetType: req.body.assetType,
-                        description: req.body.description,
-                        ceo: req.body.ceo,
-                        employees: req.body.employees,
-                        headquarter: req.body.headquarter,
-                        sector: req.body.sector,
-                        industry: req.body.industry,
-                        market_cap: req.body.market_cap,
-                        peRatio: req.body.peRatio,
-                        dividentYield: req.body.dividentYield,
-                        beta: req.body.beta,
-                        name: req.body.name,
-                        symbol: req.body.symbol,
-                        revenue: req.body.revenue,
-                        eps: req.body.eps,
-                        country: req.body.country,
-                        numberOfAssetsOwned: req.body.numberOfAssetsOwned,
-                        listOwnedAssetId: list.id
-                    })
-                    // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
-                }
-                
+                if(req.query.type == "owned"){
+                    let list = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
+                    let crypto = await tables['Cryptocurrency'].findOne({where: {symbol: req.query.symbol}})
+                    if(crypto != null) {
+                        crypto.update({
+                            listOwnedAssetId: list.id
+                        })
+                    } else {
+                        await tables['Cryptocurrency'].create({ 
+                            website: req.body.urls.website[0],
+                            tehnicalDoc: req.body.urls.technical_doc[0],
+                            explorer: req.body.urls.explorer[0],
+                            source_code: req.body.urls.source_code[0],
+                            logo: req.body.logo,
+                            name: req.body.name,
+                            symbol: req.body.symbol,
+                            description: req.body.description,
+                            numberOfAssetsOwned : req.body.numberOfAssetsOwned,
+                            price : req.body.price,
+                            listOwnedAssetId: list.id
+                        })
+                    }
+                } 
                 res.status(201).json({
-                    Message: "Resource created",
-                    statusCode: 201
+                    Message: "Resource created"
                 })
             }
             else {
@@ -480,9 +480,43 @@ router.get('/get-asset-owned-list', async(req, res, next) => {
                 let ownedList = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
                 let stocks = await tables['Stock'].findAll({where: {listOwnedAssetId: ownedList.id}})
                 let cryptocurrencies = await tables['Cryptocurrency'].findAll({where: {listOwnedAssetId: ownedList.id}})
+                
+                let formattedCrypto = []
+                for(let i = 0; i < cryptocurrencies.length; i++) {
+                    let jsonCrypto = {}
+                    jsonCrypto['logo'] = cryptocurrencies[i].logo
+                    jsonCrypto['name'] = cryptocurrencies[i].name
+                    jsonCrypto['symbol'] = cryptocurrencies[i].symbol
+                    jsonCrypto['description'] = cryptocurrencies[i].description
+                    jsonCrypto['numberOfAssetsOwned'] = cryptocurrencies[i].numberOfAssetsOwned
+                    jsonCrypto['price'] = cryptocurrencies[i].price
+                
+                    let jsonCryptoURL = {}
+
+                    let wb = []
+                    wb.push(cryptocurrencies[i].website)
+                    jsonCryptoURL['website'] = wb
+
+                    let td = []
+                    td.push(cryptocurrencies[i].tehnicalDoc)
+                    jsonCryptoURL['technical_doc'] = td
+
+                    let e = []
+                    e.push(cryptocurrencies[i].explorer)
+                    jsonCryptoURL['explorer'] = e
+
+                    let sc = []
+                    sc.push(cryptocurrencies[i].source_code)
+                    jsonCryptoURL['source_code'] = sc
+
+                    jsonCrypto['urls'] = jsonCryptoURL
+
+                    formattedCrypto.push(jsonCrypto)
+                }
+                
                 res.status(200).json({
                     stock: stocks,
-                    crypto: cryptocurrencies
+                    crypto: formattedCrypto
                 })
             }
             else {
@@ -623,6 +657,7 @@ router.post('/create-address', async(req, res, next) => {
                     .create({
                         address: req.body.address,
                         blockchain: req.body.blockchain,
+                        balance: req.body.balance,
                         userId: user.id
                     })
                     .then(createdObjective => {

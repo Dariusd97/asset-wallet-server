@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
         blockchain : {
             type: Sequelize.STRING(255),
             allowNull : false
+        },
+        balance: {
+            type: Sequelize.STRING(255),
+            allowNull: true
         }
     })
     return Address

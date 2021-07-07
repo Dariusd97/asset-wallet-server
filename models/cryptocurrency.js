@@ -34,11 +34,15 @@ module.exports = (sequelize, DataTypes) => {
             allowNull : true
         },
         description : {
-            type: Sequelize.STRING(255),
+            type: Sequelize.TEXT,
             allowNull : true
         },
         numberOfAssetsOwned : {
-            type: Sequelize.INTEGER,
+            type: Sequelize.DOUBLE,
+            allowNull : true
+        },
+        price : {
+            type: Sequelize.STRING,
             allowNull : true
         }
     })
