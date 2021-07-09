@@ -229,8 +229,6 @@ router.post('/add-stock-to-list', async(req, res, next) => {
                     // POATE FAC CALL DE FIECARE DATA PENTRU PRETURI CA SA NU LE MAI SALVEZ
                 }
                 }
-                
-                
                 res.status(201).json({
                     Message: "Resource created"
                 })
@@ -385,27 +383,18 @@ router.get('/get-asset-followed-list', async(req, res, next) => {
 // remove one asset from followed assets
 router.delete('/remove-asset-followed-list', async(req, res, next) => {
     try {
-        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.assetType && req.query.name) {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.name) {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             let folowedList = await tables['ListFollowedAssets'].findOne({where: {userId: user.id}})
             if (user != null) {
-                if (req.query.assetType == "crypto") {
-                    await tables['Cryptocurrency']
-                        .destroy({where: {listFollowedAssetId: folowedList.id, name: req.query.name}})
-                        .then(() => {
-                            res.status(200).json({
-                                Message: "Resource deleted!"
-                            })
-                        })
-                } else {
-                    await tables['Stock']
-                        .destroy({where: {listFollowedAssetId: folowedList.id, name: req.query.name}})
-                        .then(() => {
-                            res.status(200).json({
-                                Message: "Resource deleted!"
-                            })
-                        })
-                }
+                let foundStock = await tables['Stock'].findOne({where: {listFollowedAssetId: folowedList.id,name: req.query.name }})
+                await tables['Stock']
+                    .update({
+                        listFollowedAssetId: null
+                    })
+                    .then(() => {
+                        res.status(200).json("Resource deleted!")
+                    })
             } else {
                 res.status(409).json({
                     Message: "User doesn't exists",
@@ -430,27 +419,51 @@ router.delete('/remove-asset-followed-list', async(req, res, next) => {
 // remove one asset from OWNED assets
 router.delete('/remove-asset-ownd-list', async(req, res, next) => {
     try {
-        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.assetType && req.query.name) {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.name) {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             let ownedList = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
             if (user != null) {
-                if (req.query.assetType == "crypto") {
-                    await tables['Cryptocurrency']
-                        .destroy({where: {listOwnedAssetId: ownedList.id, name: req.query.name}})
-                        .then(() => {
-                            res.status(200).json({
-                                Message: "Resource deleted!"
-                            })
-                        })
-                } else {
-                    await tables['Stock']
-                        .destroy({where: {listOwnedAssetId: ownedList.id, name: req.query.name}})
-                        .then(() => {
-                            res.status(200).json({
-                                Message: "Resource deleted!"
-                            })
-                        })
-                }
+                let foundStock = await tables['Stock'].findOne({where: {listOwnedAssetId: ownedList.id,name: req.query.name }})
+                foundStock.update({
+                    listOwnedAssetId: null
+                }).then(() => {
+                    res.status(200).json("Resource deleted!")
+                })
+            } else {
+                res.status(409).json({
+                    Message: "User doesn't exists",
+                    statusCode: 404
+                })
+            }
+        }
+        else {
+            res.status(400).json({
+                Message: "Bad request",
+                statusCode: 400
+            })
+        }
+    }
+    catch (error) {
+        console.log(error)
+        res.status(500).json({ Message: "Server error" })
+    }
+})
+
+
+
+// remove one crypto from OWNED assets
+router.delete('/remove-crypto-owned-list', async(req, res, next) => {
+    try {
+        if (req.query.email && req.query.email !== null && req.query.email !== '') {
+            let user = await tables.User.findOne({ where: { email: req.query.email } })
+            let ownedList = await tables['ListOwnedAssets'].findOne({where: {userId: user.id}})
+            if (user != null) {
+                let foundCrypto = await tables['Cryptocurrency'].findOne({where: {listOwnedAssetId: ownedList.id,symbol: req.query.symbol }})
+                foundCrypto.update({
+                    listOwnedAssetId: null
+                }).then(() => {
+                    res.status(200).json("Resource deleted!")
+                })
             } else {
                 res.status(409).json({
                     Message: "User doesn't exists",
@@ -552,7 +565,10 @@ router.post('/create-objectives', async(req, res, next) => {
                         userId: user.id
                     })
                     .then(createdObjective => {
-                        res.status(201).json(createdObjective.goal)
+                        let goal = {}
+                        goal['goal'] = createdObjective.goal
+                        goal['id'] = createdObjective.id
+                        res.status(201).json(goal)
                     }) 
             }
             else {
@@ -586,7 +602,9 @@ router.get('/get-all-objectives', async(req, res, next) => {
                 let objectives = await tables['FinancialGoal'].findAll({where: {userId: user.id}})
                 let foo = []
                 for(let i = 0; i < objectives.length; i++) {
-                    let goal = objectives[i].goal;
+                    let goal = {}
+                    goal['id'] = objectives[i].id;
+                    goal['goal'] = objectives[i].goal;
                     foo.push(goal)
                 }
                 res.status(200).json(foo)         
@@ -872,15 +890,15 @@ router.post('/save-mc-sim', async(req, res, next) => {
 // remove monte carlo report for a user
 router.delete('/remove-mc-report', async(req, res, next) => {
     try {
-        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.mcID) {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.id) {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             if (user != null) {
-                await tables['ReportEntity'].destroy({where: {monteCarloSimulationReportId: req.query.mcID}})
+                await tables['ReportEntity'].destroy({where: {monteCarloSimulationReportId: req.query.id}})
                 await tables['MonteCarloSimulation']
                     .destroy({ 
                         where:{
                             userId: user.id,
-                            id: req.query.mcID
+                            id: req.query.id
                         }
                     })
                 res.status(200).json("Resource deleted!")
@@ -1070,15 +1088,15 @@ router.get('/get-all-portoflio-allocation-reports', async(req, res, next) => {
 // remove portfolio allocation report for a user
 router.delete('/remove-portfolio-allocation-report', async(req, res, next) => {
     try {
-        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.portfolioID) {
+        if (req.query.email && req.query.email !== null && req.query.email !== '' && req.query.id) {
             let user = await tables.User.findOne({ where: { email: req.query.email } })
             if (user != null) {
-                await tables['Returns'].destroy({where: {portfolioAllocationReportId: req.query.portfolioID}})
+                await tables['Returns'].destroy({where: {portfolioAllocationReportId: req.query.id}})
                 await tables['PortfolioAllocationReport']
                     .destroy({ 
                         where:{
                             userId: user.id,
-                            id: req.query.portfolioID
+                            id: req.query.id
                         }
                     })
                 res.status(200).json("Resource deleted!")
